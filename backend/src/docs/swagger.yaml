@@ -1,0 +1,66 @@
+openapi: 3.0.0
+info:
+  title: Room Booking Platform API
+  version: 1.0.0
+  description: API for managing users, rooms, and bookings.
+servers:
+  - url: http://localhost:5000/api/v1
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+                name: { type: string }
+      responses:
+        '201':
+          description: User created
+  /rooms:
+    get:
+      summary: Search available rooms
+      parameters:
+        - name: checkIn
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: checkOut
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: location
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of rooms
+  /bookings:
+    post:
+      summary: Create a booking
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomId: { type: string }
+                checkIn: { type: string, format: date }
+                checkOut: { type: string, format: date }
+      responses:
+        '201':
+          description: Booking confirmed
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
