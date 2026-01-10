@@ -1,88 +1,125 @@
 ﻿# Room Booking Platform - System Design
 
 ## 1. High-Level Architecture
-The system follows a microservices architecture to ensure scalability and maintainability.
+The system follows a microservices-inspired architecture designed for horizontal scalability and high availability.
 
 ### Components:
-- **Frontend (UI Service)**: A React application (TypeScript) served via a CDN (e.g., CloudFront/Cloudflare) for low latency.
-- **Backend (API Service)**: A Node.js/TypeScript service handling business logic, authentication, and database interactions.
-- **Database**: PostgreSQL for persistent storage of users, rooms, and bookings.
-- **Cache**: Redis for session management, rate limiting, and caching room availability.
-- **Load Balancer**: Distributes traffic across multiple instances of the backend service.
-- **Multi-region Deployment**: 
-  - Primary/Secondary database replication.
-  - Geo-DNS to route users to the nearest regional deployment.
-  - Global CDN for static assets.
+- **Frontend (UI Service)**: A React/TypeScript SPA. In production, this is served from a CDN (Cloudfront) with S3 as the origin for low-latency delivery.
+- **Backend (API Service)**: A Node.js/TypeScript service using Express. It handles core business logic, authentication, and orchestrates database operations.
+- **Database (PostgreSQL)**: The source of truth. We use PostgreSQL for its robust ACID compliance, which is critical for handling bookings and preventing double-booking.
+- **Cache (Redis)**:
+    - **Session/Rate Limiting**: Stores JWT blacklists or rate-limiting counters.
+    - **Search Cache**: Caches popular search results to reduce DB load.
+- **Load Balancer**: Nginx or AWS ALB to distribute traffic across multiple backend instances.
+- **Multi-region Deployment**:
+    - **Global Traffic Manager**: Routes users to the nearest regional deployment (US-East, EU-West, etc.).
+    - **Database Replication**: Cross-region read replicas for search. Primary database for writes (bookings) handles global consistency, or use a distributed DB like CockroachDB for global write-heavy workloads.
 
 ---
 
 ## 2. API Design
-All APIs use JSON and require Bearer Token authentication (JWT).
+All endpoints follow RESTful principles and return JSON.
 
 ### Endpoints:
-- POST /api/v1/auth/register: Register a new user.
-- POST /api/v1/auth/login: Authenticate and receive a JWT.
-- GET /api/v1/rooms: Search for available rooms based on date range, location, and capacity.
-- POST /api/v1/bookings: Create a booking (requires authentication).
+- `POST /api/v1/auth/register`:
+    - Body: `{ email, password, name }`
+    - Response: `{ id, email, token }`
+- `POST /api/v1/auth/login`:
+    - Body: `{ email, password }`
+    - Response: `{ token }`
+- `GET /api/v1/rooms`:
+    - Query: `?location=X&checkIn=Y&checkOut=Z&capacity=N`
+    - Response: `[{ id, name, price, availableCount }]`
+- `POST /api/v1/bookings`:
+    - Headers: `Authorization: Bearer <JWT>`
+    - Body: `{ roomId, checkIn, checkOut }`
+    - Response: `{ bookingId, status: 'confirmed' }`
 
 ### Rate Limiting:
-- Implemented at the API Gateway or Middleware level using Redis (Token Bucket algorithm).
-- Limits: 100 requests per minute for search, 10 requests per minute for booking.
+- **Strategy**: Token Bucket algorithm implemented in Redis middleware.
+- **Thresholds**: 
+    - Auth: 5 requests/min per IP.
+    - Search: 100 requests/min per IP.
+    - Booking: 10 requests/min per User.
 
 ---
 
 ## 3. Database Schema
 
-### Users
-- id: UUID (PK)
-- email: VARCHAR (Unique)
-- password_hash: TEXT
-- created_at: TIMESTAMP
+### `users`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK, DEFAULT uuid_generate_v4() |
+| email | VARCHAR | UNIQUE, NOT NULL |
+| password_hash | TEXT | NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
 
-### Rooms
-- id: UUID (PK)
-- 
-ame: VARCHAR
-- description: TEXT
-- price_per_night: DECIMAL
-- location: VARCHAR
-- 	otal_inventory: INTEGER (number of identical rooms available)
+### `rooms`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| name | VARCHAR | NOT NULL |
+| description | TEXT | |
+| price_per_night | DECIMAL | NOT NULL |
+| location | VARCHAR | INDEXED |
+| total_inventory | INTEGER | Total units of this room type |
 
-### Bookings
-- id: UUID (PK)
-- user_id: UUID (FK)
-- oom_id: UUID (FK)
-- check_in: DATE
-- check_out: DATE
-- status: ENUM ('pending', 'confirmed', 'cancelled')
-- created_at: TIMESTAMP
+### `bookings`
+| Column | Type | Constraints |
+|---|---|---|
+| id | UUID | PK |
+| user_id | UUID | FK -> users.id |
+| room_id | UUID | FK -> rooms.id |
+| check_in | DATE | NOT NULL |
+| check_out | DATE | NOT NULL |
+| status | ENUM | 'confirmed', 'cancelled' |
+| created_at | TIMESTAMP | DEFAULT NOW() |
 
-### Room_Availability (Internal Optimization)
-- oom_id: UUID (FK)
-- date: DATE
-- vailable_count: INTEGER (tracks remaining units per day)
-- *Index on (room_id, date)*
+### `room_availability` (Pre-calculated for performance)
+| Column | Type | Constraints |
+|---|---|---|
+| room_id | UUID | FK -> rooms.id |
+| date | DATE | NOT NULL |
+| available_count | INTEGER | Units left for this specific day |
+- **Index**: Unique constraint on `(room_id, date)`.
 
 ---
 
 ## 4. Concurrency Handling
-To prevent **double-booking** (race conditions):
-1. **Database Transactions**: Use SERIALIZABLE isolation level for booking operations.
-2. **Pessimistic Locking**: Use SELECT FOR UPDATE on the availability row for the specific room and date range during the booking process.
-3. **Atomic Updates**: UPDATE Room_Availability SET available_count = available_count - 1 WHERE room_id = ? AND date = ? AND available_count > 0.
+To ensure a room isn't double-booked during high-concurrency (e.g., flash sales):
+
+1. **Atomic Inventory Update**:
+   ```sql
+   UPDATE room_availability 
+   SET available_count = available_count - 1 
+   WHERE room_id = $1 
+     AND date BETWEEN $2 AND $3 
+     AND available_count > 0;
+   ```
+   If the affected row count equals the number of days in the range, the booking is successful.
+2. **Database Transactions**: Wrap the booking creation and inventory update in a single transaction with `SERIALIZABLE` or `READ COMMITTED` isolation level using `FOR UPDATE` locks.
+3. **Optimistic Locking**: Use a `version` column in the availability table if conflicts are expected to be rare.
 
 ---
 
 ## 5. Scalability Strategies
-- **Search Optimization**: Cache room availability in Redis. Use indexes on location and price.
-- **Read Replicas**: Use PostgreSQL read replicas to scale the GET /rooms traffic.
-- **Horizontal Scaling**: Backend instances run in Docker containers (K8s/ECS) and scale based on CPU/Memory usage.
-- **Caching Strategy**: Cache the list of rooms for 5-10 minutes; use a "Cache-Aside" pattern for specific availability.
+- **Caching**: Redis caches the `GET /rooms` results for a short duration (e.g., 60 seconds).
+- **Read/Write Splitting**: Route search queries to read replicas and booking requests to the primary DB.
+- **Horizontal Scaling**: Use Kubernetes to autoscale backend pods based on incoming request metrics.
 
 ---
 
-## 6. Optional Components
-- **Monitoring**: Prometheus and Grafana for system metrics (request latency, error rates).
-- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana) for centralized logging.
-- **Notifications**: RabbitMQ or AWS SQS to trigger confirmation emails asynchronously.
-- **Analytics**: Clickstream data collection for user behavior analysis.
+## 6. Implementation Flow (From Scratch)
+
+1. **Environment Setup**: Initialize Node.js project with TypeScript, Express, and PG client.
+2. **Database Migration**: Create the tables and initial seed data for rooms.
+3. **Authentication Layer**: Implement JWT-based auth with bcrypt for password hashing.
+4. **Search Logic**: 
+   - Calculate availability by checking `room_availability` table or by subtracting active bookings from `total_inventory`.
+5. **Booking Logic**:
+   - Start DB Transaction.
+   - Lock availability rows for the requested dates.
+   - Check if `available_count > 0`.
+   - If yes: Create booking record, decrement availability, commit.
+   - If no: Rollback and return error.
+6. **Error Handling**: Implement global error middleware for consistent API responses.
