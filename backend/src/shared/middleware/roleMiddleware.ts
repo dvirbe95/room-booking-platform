@@ -1,8 +1,9 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './authMiddleware';
 import { ForbiddenError } from '../errors/AppError';
+import { Role } from '@prisma/client';
 
-export const authorize = (...allowedRoles: string[]) => {
+export const authorize = (...allowedRoles: Role[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new ForbiddenError('User not authenticated'));

@@ -21,7 +21,6 @@ export const errorHandler = (
     });
   }
 
-  // Log unexpected errors for debugging
   Logger.error('Internal server error', {
     error: err.message,
     stack: err.stack,

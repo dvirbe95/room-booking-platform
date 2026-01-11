@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
+    "@prisma/client": "^7.2.0",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/yamljs": "^0.2.34",
     "bcrypt": "^5.1.0",

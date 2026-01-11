@@ -5,14 +5,12 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import path from 'path';
 
-import { query } from './db';
-import { initDb, seedData } from './db/schema';
-import authRoutes from './routes/authRoutes';
-import roomRoutes from './routes/roomRoutes';
-import bookingRoutes from './routes/bookingRoutes';
-import { errorHandler } from './middleware/errorMiddleware';
-import { connectRedis } from './utils/redis';
-import { Logger } from './utils/logger';
+import authRoutes from './modules/auth/auth.routes';
+import roomRoutes from './modules/room/room.routes';
+import bookingRoutes from './modules/booking/booking.routes';
+import { errorHandler } from './shared/middleware/errorMiddleware';
+import { connectRedis } from './shared/utils/redis';
+import { Logger } from './shared/utils/logger';
 
 dotenv.config();
 
@@ -40,11 +38,6 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    // DB Setup
-    await query(initDb);
-    await query(seedData);
-    Logger.info('Database initialized');
-
     // Redis Setup
     await connectRedis();
 

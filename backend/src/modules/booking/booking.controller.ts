@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { BookingService } from '../services/bookingService';
-import { AuthRequest } from '../middleware/authMiddleware';
+import { BookingService } from './booking.service';
+import { AuthRequest } from '../../shared/middleware/authMiddleware';
 
 const bookingService = new BookingService();
 
