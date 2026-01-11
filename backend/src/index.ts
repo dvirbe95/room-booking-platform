@@ -12,6 +12,7 @@ import roomRoutes from './routes/roomRoutes';
 import bookingRoutes from './routes/bookingRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 import { connectRedis } from './utils/redis';
+import { Logger } from './utils/logger';
 
 dotenv.config();
 
@@ -42,16 +43,16 @@ const startServer = async () => {
     // DB Setup
     await query(initDb);
     await query(seedData);
-    console.log('Database initialized');
+    Logger.info('Database initialized');
 
     // Redis Setup
     await connectRedis();
 
     app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
+      Logger.info(`Server is running on port ${port}`);
     });
   } catch (err) {
-    console.error('Failed to start server:', err);
+    Logger.error('Failed to start server', { error: err });
     process.exit(1);
   }
 };
