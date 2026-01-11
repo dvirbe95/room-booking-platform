@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "@types/swagger-ui-express": "^4.1.8",
