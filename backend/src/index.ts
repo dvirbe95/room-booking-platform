@@ -1,34 +1,31 @@
 ﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
+import path from 'path';
+
 import { query } from './db';
 import { initDb, seedData } from './db/schema';
 import authRoutes from './routes/authRoutes';
 import roomRoutes from './routes/roomRoutes';
 import bookingRoutes from './routes/bookingRoutes';
+import { errorHandler } from './middleware/errorMiddleware';
+import { connectRedis } from './utils/redis';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Swagger documentation
+const swaggerDocument = YAML.load(path.join(__dirname, './docs/swagger.yaml'));
+
 app.use(cors());
 app.use(express.json());
 
-// Initialize Database
-const setupDb = async () => {
-  try {
-    await query(initDb);
-    await query(seedData);
-    console.log('Database initialized successfully');
-  } catch (err) {
-    console.error('Failed to initialize database:', err);
-  }
-};
-
-setupDb();
-
 // Routes
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/rooms', roomRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
@@ -37,6 +34,26 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// Global Error Handler
+app.use(errorHandler);
+
+const startServer = async () => {
+  try {
+    // DB Setup
+    await query(initDb);
+    await query(seedData);
+    console.log('Database initialized');
+
+    // Redis Setup
+    await connectRedis();
+
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
+
+startServer();
