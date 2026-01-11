@@ -22,7 +22,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const user = await this.userRepository.create(email, passwordHash, name);
-    const token = this.generateToken(user.id, user.email);
+    const token = this.generateToken(user.id, user.email, user.role);
 
     return { user, token };
   }
@@ -38,19 +38,20 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const token = this.generateToken(user.id, user.email);
+    const token = this.generateToken(user.id, user.email, user.role);
 
     return {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name
+        name: user.name,
+        role: user.role
       },
       token
     };
   }
 
-  private generateToken(id: string, email: string): string {
-    return jwt.sign({ id, email }, JWT_SECRET, { expiresIn: '24h' });
+  private generateToken(id: string, email: string, role: string): string {
+    return jwt.sign({ id, email, role }, JWT_SECRET, { expiresIn: '24h' });
   }
 }

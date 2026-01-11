@@ -5,6 +5,7 @@ export interface User {
   email: string;
   password_hash: string;
   name?: string;
+  role: string;
   created_at?: Date;
 }
 
@@ -21,7 +22,7 @@ export class UserRepository {
 
   async create(email: string, passwordHash: string, name?: string): Promise<User> {
     const result = await query(
-      'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name, created_at',
+      'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name, role, created_at',
       [email, passwordHash, name]
     );
     return result.rows[0];
