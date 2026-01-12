@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password_hash String
+  name          String?
+  role          Role      @default(USER)
+  created_at    DateTime  @default(now())
+  bookings      Booking[]
+
+  @@map("users")
+}
+
+model Room {
+  id              String             @id @default(uuid())
+  name            String
+  description     String?
+  price_per_night Decimal            @db.Decimal(10, 2)
+  location        String
+  total_inventory Int                @default(1)
+  bookings        Booking[]
+  availability    RoomAvailability[]
+
+  @@map("rooms")
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  user_id    String
+  room_id    String
+  check_in   DateTime      @db.Date
+  check_out  DateTime      @db.Date
+  status     BookingStatus @default(CONFIRMED)
+  created_at DateTime      @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [room_id], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model RoomAvailability {
+  room_id         String
+  date            DateTime @db.Date
+  available_count Int
+
+  room Room @relation(fields: [room_id], references: [id], onDelete: Cascade)
+
+  @@id([room_id, date])
+  @@map("room_availability")
+}
