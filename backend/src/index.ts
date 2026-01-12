@@ -1,16 +1,15 @@
-﻿import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
+﻿import cors from 'cors';
 import path from 'path';
-
+import YAML from 'yamljs';
+import dotenv from 'dotenv';
+import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import { Logger } from './shared/utils/logger';
 import authRoutes from './modules/auth/auth.routes';
 import roomRoutes from './modules/room/room.routes';
+import { connectRedis } from './shared/utils/redis';
 import bookingRoutes from './modules/booking/booking.routes';
 import { errorHandler } from './shared/middleware/errorMiddleware';
-import { connectRedis } from './shared/utils/redis';
-import { Logger } from './shared/utils/logger';
 
 dotenv.config();
 

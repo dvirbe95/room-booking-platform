@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as roomController from './room.controller';
-import { validate } from '../../shared/middleware/validationMiddleware';
 import { searchRoomsSchema } from '../../shared/utils/schemas';
+import { validate } from '../../shared/middleware/validationMiddleware';
 
 const router = Router();
 
