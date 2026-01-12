@@ -67,6 +67,6 @@ model RoomAvailability {
 
   room Room @relation(fields: [room_id], references: [id], onDelete: Cascade)
 
-  @@primaryKey([room_id, date])
+  @@id([room_id, date])
   @@map("room_availability")
 }

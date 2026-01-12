@@ -1,5 +1,5 @@
-import { BookingStatus, Prisma } from '@prisma/client';
 import prisma from '../../shared/utils/prisma';
+import { BookingStatus, Prisma } from '@prisma/client';
 
 export class BookingRepository {
   async createWithTransaction(
