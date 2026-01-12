@@ -5,13 +5,15 @@ import { store } from './store';
 import { Navbar } from './components/Navbar';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { HomePage } from './pages/HomePage';
+import { MyBookingsPage } from './pages/MyBookingsPage';
 import './index.css';
 
 const Layout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen bg-gray-50 flex flex-col">
     <Navbar />
     <main className="container mx-auto px-4 py-8 flex-grow">{children}</main>
-    <footer className="py-6 text-center text-gray-400 text-sm border-t border-gray-100 bg-white">
+    <footer className="py-6 text-center text-gray-400 text-sm border-t border-gray-100 bg-white mt-12">
       © 2026 RoomBooking Platform. All rights reserved.
     </footer>
   </div>
@@ -23,9 +25,10 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<div className="text-center py-20"><h2 className="text-3xl font-bold text-gray-800">Ready to find your next stay?</h2></div>} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/my-bookings" element={<MyBookingsPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Layout>

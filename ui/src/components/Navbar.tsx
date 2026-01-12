@@ -28,6 +28,12 @@ export const Navbar = () => {
         <div className="flex items-center space-x-4">
           {isAuthenticated ? (
             <>
+              <Link
+                to="/my-bookings"
+                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors mr-2"
+              >
+                My Bookings
+              </Link>
               <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
                 <UserIcon className="w-4 h-4" />
                 <span className="font-medium">{user?.name || user?.email}</span>
