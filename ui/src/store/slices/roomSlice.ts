@@ -38,8 +38,20 @@ const roomSlice = createSlice({
       state.error = action.payload;
       state.loading = false;
     },
+    startSearch: (state, action: PayloadAction<RoomState['searchParams']>) => {
+      state.loading = true;
+      state.error = null;
+      state.rooms = [];
+      state.searchParams = action.payload;
+    },
+    resetSearch: (state) => {
+      state.rooms = [];
+      state.searchParams = null;
+      state.loading = false;
+      state.error = null;
+    },
   },
 });
 
-export const { setRooms, setSearchParams, setLoading, setError } = roomSlice.actions;
+export const { setRooms, setSearchParams, setLoading, setError, resetSearch, startSearch } = roomSlice.actions;
 export default roomSlice.reducer;

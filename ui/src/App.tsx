@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from './pages/HomePage';
 import { MyBookingsPage } from './pages/MyBookingsPage';
+import { ProtectedRoute, PublicRoute } from './components/AuthRoutes';
 import './index.css';
 
 const Layout = ({ children }: { children: React.ReactNode }) => (
@@ -26,9 +27,18 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/my-bookings" element={<MyBookingsPage />} />
+            
+            {/* Auth Routes - Only for non-logged in users */}
+            <Route element={<PublicRoute />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Route>
+
+            {/* Protected Routes - Only for logged in users */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/my-bookings" element={<MyBookingsPage />} />
+            </Route>
+
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Layout>

@@ -1,125 +1,81 @@
-﻿# Room Booking Platform - System Design
+﻿# Room Booking Platform - Technical Architecture & Strategy
+
+This document outlines the high-level design, realistic constraints, and scalability strategies for the Room Booking Platform.
+
+---
 
 ## 1. High-Level Architecture
-The system follows a microservices-inspired architecture designed for horizontal scalability and high availability.
+The system is built using a **Modular Monolith** approach (Domain-Driven Design), designed for a seamless transition to **Microservices**.
 
 ### Components:
-- **Frontend (UI Service)**: A React/TypeScript SPA. In production, this is served from a CDN (Cloudfront) with S3 as the origin for low-latency delivery.
-- **Backend (API Service)**: A Node.js/TypeScript service using Express. It handles core business logic, authentication, and orchestrates database operations.
-- **Database (PostgreSQL)**: The source of truth. We use PostgreSQL for its robust ACID compliance, which is critical for handling bookings and preventing double-booking.
-- **Cache (Redis)**:
-    - **Session/Rate Limiting**: Stores JWT blacklists or rate-limiting counters.
-    - **Search Cache**: Caches popular search results to reduce DB load.
-- **Load Balancer**: Nginx or AWS ALB to distribute traffic across multiple backend instances.
-- **Multi-region Deployment**:
-    - **Global Traffic Manager**: Routes users to the nearest regional deployment (US-East, EU-West, etc.).
-    - **Database Replication**: Cross-region read replicas for search. Primary database for writes (bookings) handles global consistency, or use a distributed DB like CockroachDB for global write-heavy workloads.
+- **Load Balancer (Nginx/ALB)**: Acts as the entry point, distributing incoming traffic across multiple backend instances to ensure high availability and prevent any single point of failure.
+- **API Gateway**: Orchestrates requests, handles global authentication, and can perform response transformation or request routing.
+- **Web Application Firewall (WAF)**: Positioned in front of the Load Balancer to protect against common web exploits (SQL Injection, XSS) and filter malicious traffic.
+- **Backend Service**: Node.js with TypeScript and Express.
+- **Database (PostgreSQL)**: The primary source of truth, ensuring strong ACID compliance.
+- **Caching & Logging (Redis)**: High-speed storage for logs and session/rate-limit data.
 
 ---
 
-## 2. API Design
-All endpoints follow RESTful principles and return JSON.
+## 2. Realistic Constraints & Solutions
 
-### Endpoints:
-- `POST /api/v1/auth/register`:
-    - Body: `{ email, password, name }`
-    - Response: `{ id, email, token }`
-- `POST /api/v1/auth/login`:
-    - Body: `{ email, password }`
-    - Response: `{ token }`
-- `GET /api/v1/rooms`:
-    - Query: `?location=X&checkIn=Y&checkOut=Z&capacity=N`
-    - Response: `[{ id, name, price, availableCount }]`
-- `POST /api/v1/bookings`:
-    - Headers: `Authorization: Bearer <JWT>`
-    - Body: `{ roomId, checkIn, checkOut }`
-    - Response: `{ bookingId, status: 'confirmed' }`
+### A. Concurrency & Double-Booking
+To prevent two users from booking the same room at the same time:
+- **Implementation**: We use **Pessimistic Locking** (`SELECT ... FOR UPDATE`) within a Prisma database transaction.
+- **Strategy**: This ensures that once a user starts a booking for a specific room/date, the row is locked at the DB level until the transaction completes.
 
-### Rate Limiting:
-- **Strategy**: Token Bucket algorithm implemented in Redis middleware.
-- **Thresholds**: 
-    - Auth: 5 requests/min per IP.
-    - Search: 100 requests/min per IP.
-    - Booking: 10 requests/min per User.
+### B. Rate Limiting
+- **Implementation**: We use `express-rate-limit` with different tiers:
+    - **Global API Limiter**: 100 requests/min.
+    - **Auth Limiter**: 10 attempts/15 min to mitigate Brute Force attacks.
+
+### C. Shared Validations (Zod)
+- **Efficiency**: We use **Zod** for schema definitions. These schemas are shared between the Backend and Frontend (via a shared package or symlink).
+- **Consistency**: This ensures that the UI provides immediate feedback based on the exact same rules that the server enforces, reducing unnecessary API calls and maintaining a single source of truth for data integrity.
 
 ---
 
-## 3. Database Schema
+## 3. Database Schema & API Endpoints
 
-### `users`
-| Column | Type | Constraints |
-|---|---|---|
-| id | UUID | PK, DEFAULT uuid_generate_v4() |
-| email | VARCHAR | UNIQUE, NOT NULL |
-| password_hash | TEXT | NOT NULL |
-| created_at | TIMESTAMP | DEFAULT NOW() |
+### Core Entities:
+- **User**: Authentication and Role-Based Access Control (RBAC).
+- **Room**: Catalog of properties and their total inventory.
+- **Booking**: Junction table representing a confirmed reservation.
+- **RoomAvailability**: Pre-calculated daily inventory for high-performance searching.
 
-### `rooms`
-| Column | Type | Constraints |
-|---|---|---|
-| id | UUID | PK |
-| name | VARCHAR | NOT NULL |
-| description | TEXT | |
-| price_per_night | DECIMAL | NOT NULL |
-| location | VARCHAR | INDEXED |
-| total_inventory | INTEGER | Total units of this room type |
-
-### `bookings`
-| Column | Type | Constraints |
-|---|---|---|
-| id | UUID | PK |
-| user_id | UUID | FK -> users.id |
-| room_id | UUID | FK -> rooms.id |
-| check_in | DATE | NOT NULL |
-| check_out | DATE | NOT NULL |
-| status | ENUM | 'confirmed', 'cancelled' |
-| created_at | TIMESTAMP | DEFAULT NOW() |
-
-### `room_availability` (Pre-calculated for performance)
-| Column | Type | Constraints |
-|---|---|---|
-| room_id | UUID | FK -> rooms.id |
-| date | DATE | NOT NULL |
-| available_count | INTEGER | Units left for this specific day |
-- **Index**: Unique constraint on `(room_id, date)`.
+### Key Endpoints:
+- `POST /api/v1/auth/register` & `login`: Identity management.
+- `GET /api/v1/rooms`: Search with date-range availability checks.
+- `POST /api/v1/bookings`: Secure booking execution with transaction logic.
+- `GET /api-docs`: Interactive **Swagger** documentation for full API exploration.
 
 ---
 
-## 4. Concurrency Handling
-To ensure a room isn't double-booked during high-concurrency (e.g., flash sales):
+## 4. Deployment & DevOps
 
-1. **Atomic Inventory Update**:
-   ```sql
-   UPDATE room_availability 
-   SET available_count = available_count - 1 
-   WHERE room_id = $1 
-     AND date BETWEEN $2 AND $3 
-     AND available_count > 0;
-   ```
-   If the affected row count equals the number of days in the range, the booking is successful.
-2. **Database Transactions**: Wrap the booking creation and inventory update in a single transaction with `SERIALIZABLE` or `READ COMMITTED` isolation level using `FOR UPDATE` locks.
-3. **Optimistic Locking**: Use a `version` column in the availability table if conflicts are expected to be rare.
+### Containerization (Docker)
+- **Portability**: The entire environment (App, DB, Redis) is containerized using **Docker**. 
+- **Docker Compose**: Orchestrates local development, ensuring "it works on my machine" translates perfectly to production.
+- **Multi-stage Builds**: Our Dockerfiles use multi-stage builds to keep production images lean (only JS files, no dev dependencies).
 
----
-
-## 5. Scalability Strategies
-- **Caching**: Redis caches the `GET /rooms` results for a short duration (e.g., 60 seconds).
-- **Read/Write Splitting**: Route search queries to read replicas and booking requests to the primary DB.
-- **Horizontal Scaling**: Use Kubernetes to autoscale backend pods based on incoming request metrics.
+### CI/CD Pipeline
+1. **Source Control**: Every change is pushed to a feature branch.
+2. **CI (Continuous Integration)**: 
+    - Automated Linting (ESLint).
+    - Unit & Integration Tests.
+    - Docker Image build verification.
+3. **CD (Continuous Deployment)**:
+    - Successful builds on `main` are automatically deployed to a staging/production cluster (K8s or ECS).
+    - **Database Migrations**: Handled automatically by Prisma during the deployment phase to ensure the schema is always in sync.
 
 ---
 
-## 6. Implementation Flow (From Scratch)
+## 5. Global Scalability Strategy (Theoretical)
 
-1. **Environment Setup**: Initialize Node.js project with TypeScript, Express, and PG client.
-2. **Database Migration**: Create the tables and initial seed data for rooms.
-3. **Authentication Layer**: Implement JWT-based auth with bcrypt for password hashing.
-4. **Search Logic**: 
-   - Calculate availability by checking `room_availability` table or by subtracting active bookings from `total_inventory`.
-5. **Booking Logic**:
-   - Start DB Transaction.
-   - Lock availability rows for the requested dates.
-   - Check if `available_count > 0`.
-   - If yes: Create booking record, decrement availability, commit.
-   - If no: Rollback and return error.
-6. **Error Handling**: Implement global error middleware for consistent API responses.
+### Multi-Region Strategy
+- **Geo-DNS**: Users are routed to the nearest regional cluster to minimize latency.
+- **Database Replication**: Use **Read Replicas** in each region for fast search operations, while keeping a **Primary Writer** (or using a globally distributed DB like CockroachDB) for consistent booking execution.
+
+### Fault Tolerance
+- **Circuit Breakers**: Prevents cascading failures when external services (e.g., Payment Gateway) are down.
+- **Centralized Monitoring**: Integrating **Prometheus** for metrics and **ELK Stack** for deep log analysis.
