@@ -38,4 +38,33 @@ export class RoomRepository {
       where: { id },
     });
   }
+
+  async create(data: { name: string; description?: string; price_per_night: number; location: string; total_inventory: number }) {
+    return prisma.$transaction(async (tx) => {
+      // 1. Create the room (Prisma/DB generates the UUID id automatically)
+      const room = await tx.room.create({
+        data,
+      });
+
+      // 2. Initialize availability for the next 30 days
+      const availabilityData = [];
+      for (let i = 0; i < 30; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+        date.setHours(0, 0, 0, 0);
+
+        availabilityData.push({
+          room_id: room.id,
+          date: date,
+          available_count: room.total_inventory,
+        });
+      }
+
+      await tx.roomAvailability.createMany({
+        data: availabilityData,
+      });
+
+      return room;
+    });
+  }
 }
