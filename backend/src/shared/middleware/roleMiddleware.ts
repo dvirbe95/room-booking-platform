@@ -1,7 +1,7 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from './authMiddleware';
-import { ForbiddenError } from '../errors/AppError';
 import { Role } from '@prisma/client';
+import { AuthRequest } from './authMiddleware';
+import { Response, NextFunction } from 'express';
+import { ForbiddenError } from '../errors/AppError';
 
 export const authorize = (...allowedRoles: Role[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {

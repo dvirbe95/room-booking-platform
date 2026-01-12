@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { Role } from '@prisma/client';
 import { AuthRepository } from './auth.repository';
 import { BadRequestError, UnauthorizedError } from '../../shared/errors/AppError';
-import { Role } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-123';
 
