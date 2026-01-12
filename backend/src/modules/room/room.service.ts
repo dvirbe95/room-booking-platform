@@ -32,4 +32,8 @@ export class RoomService {
     }
     return room;
   }
+
+  async createRoom(data: { name: string; description?: string; price_per_night: number; location: string; total_inventory: number }) {
+    return await this.roomRepository.create(data);
+  }
 }
