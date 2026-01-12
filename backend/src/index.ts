@@ -10,6 +10,7 @@ import roomRoutes from './modules/room/room.routes';
 import { connectRedis } from './shared/utils/redis';
 import bookingRoutes from './modules/booking/booking.routes';
 import { errorHandler } from './shared/middleware/errorMiddleware';
+import { apiLimiter } from './shared/middleware/rateLimiter';
 
 dotenv.config();
 
@@ -21,6 +22,9 @@ const swaggerDocument = YAML.load(path.join(__dirname, './docs/swagger.yaml'));
 
 app.use(cors());
 app.use(express.json());
+
+// Global Rate Limiting
+app.use('/api/', apiLimiter);
 
 // Routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
