@@ -4,6 +4,7 @@ import { RootState } from '../store';
 import { setBookings, setLoading, setError } from '../store/slices/bookingSlice';
 import api from '../api/axios';
 import { Calendar, MapPin, CheckCircle } from 'lucide-react';
+import { ApiEndpoints, ErrorMessages } from '../shared/constants';
 
 export const MyBookingsPage = () => {
   const dispatch = useDispatch();
@@ -13,10 +14,10 @@ export const MyBookingsPage = () => {
     const fetchBookings = async () => {
       dispatch(setLoading(true));
       try {
-        const response = await api.get('/bookings/my-bookings');
+        const response = await api.get(`${ApiEndpoints.BOOKINGS}/my-bookings`);
         dispatch(setBookings(response.data));
       } catch (err: any) {
-        dispatch(setError(err.response?.data?.message || 'Failed to fetch bookings'));
+        dispatch(setError(err.response?.data?.message || ErrorMessages.FETCH_BOOKINGS_FAILED));
       } finally {
         dispatch(setLoading(false));
       }

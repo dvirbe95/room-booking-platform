@@ -5,6 +5,7 @@ import { RootState } from '../store';
 import { logout } from '../store/slices/authSlice';
 import { resetSearch } from '../store/slices/roomSlice';
 import { LogOut, User as UserIcon, Calendar, Search } from 'lucide-react';
+import { AppRoutes } from '../shared/constants';
 import { clsx } from 'clsx';
 
 export const Navbar = () => {
@@ -13,11 +14,11 @@ export const Navbar = () => {
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isAuthPage = location.pathname === AppRoutes.LOGIN || location.pathname === AppRoutes.REGISTER;
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate('/login');
+    navigate(AppRoutes.LOGIN);
   };
 
   const handleSearchClick = () => {
@@ -35,7 +36,7 @@ export const Navbar = () => {
   return (
     <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <Link to="/" onClick={handleSearchClick} className="flex items-center space-x-2">
+        <Link to={AppRoutes.HOME} onClick={handleSearchClick} className="flex items-center space-x-2">
           <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
             <Calendar className="text-white w-5 h-5" />
           </div>
@@ -46,15 +47,15 @@ export const Navbar = () => {
           {/* Hide navigation buttons on Login/Register pages */}
           {!isAuthPage && (
             <>
-              {location.pathname !== '/' && (
-                <Link to="/" onClick={handleSearchClick} className={navLinkClass('/')}>
+              {location.pathname !== AppRoutes.HOME && (
+                <Link to={AppRoutes.HOME} onClick={handleSearchClick} className={navLinkClass(AppRoutes.HOME)}>
                   <Search className="w-4 h-4 mr-1 md:mr-0" />
                   <span className="hidden md:inline">Search</span>
                 </Link>
               )}
               
-              {isAuthenticated && location.pathname !== '/my-bookings' && (
-                <Link to="/my-bookings" className={navLinkClass('/my-bookings')}>
+              {isAuthenticated && location.pathname !== AppRoutes.MY_BOOKINGS && (
+                <Link to={AppRoutes.MY_BOOKINGS} className={navLinkClass(AppRoutes.MY_BOOKINGS)}>
                   <Calendar className="w-4 h-4 mr-1 md:mr-0" />
                   <span className="hidden md:inline">My Bookings</span>
                 </Link>
@@ -81,13 +82,13 @@ export const Navbar = () => {
             !isAuthPage && (
               <div className="flex items-center space-x-2">
                 <Link
-                  to="/login"
+                  to={AppRoutes.LOGIN}
                   className="text-sm font-bold text-gray-600 px-4 py-2 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   Login
                 </Link>
                 <Link
-                  to="/register"
+                  to={AppRoutes.REGISTER}
                   className="text-sm font-bold px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-all shadow-sm"
                 >
                   Register

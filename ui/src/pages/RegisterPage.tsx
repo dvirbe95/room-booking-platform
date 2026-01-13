@@ -8,6 +8,7 @@ import { setCredentials, setLoading, setError } from '../store/slices/authSlice'
 import { RootState } from '../store';
 import api from '../api/axios';
 import { Button } from '../components/Button';
+import { AppRoutes, ApiEndpoints, ErrorMessages } from '../shared/constants';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
@@ -26,11 +27,11 @@ export const RegisterPage = () => {
     dispatch(setLoading(true));
     dispatch(setError(null));
     try {
-      const response = await api.post('/auth/register', data);
+      const response = await api.post(ApiEndpoints.AUTH_REGISTER, data);
       dispatch(setCredentials(response.data));
-      navigate('/');
+      navigate(AppRoutes.HOME);
     } catch (err: any) {
-      dispatch(setError(err.response?.data?.message || 'Registration failed'));
+      dispatch(setError(err.response?.data?.message || ErrorMessages.REGISTER_FAILED));
     } finally {
       dispatch(setLoading(false));
     }
@@ -87,7 +88,7 @@ export const RegisterPage = () => {
 
       <p className="text-center mt-6 text-sm text-gray-600">
         Already have an account?{' '}
-        <Link to="/login" className="text-blue-600 font-medium hover:underline">
+        <Link to={AppRoutes.LOGIN} className="text-blue-600 font-medium hover:underline">
           Sign In
         </Link>
       </p>

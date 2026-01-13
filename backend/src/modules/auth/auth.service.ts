@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { AuthRepository } from './auth.repository';
 import { BadRequestError, UnauthorizedError } from '../../shared/errors/AppError';
+import { ErrorMessages } from '../../shared/constants/enums';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-123';
 
@@ -16,7 +17,7 @@ export class AuthService {
   async register(email: string, password: string, name?: string) {
     const existingUser = await this.authRepository.findByEmail(email);
     if (existingUser) {
-      throw new BadRequestError('User with this email already exists');
+      throw new BadRequestError(ErrorMessages.USER_EXISTS);
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -45,12 +46,12 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.authRepository.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError(ErrorMessages.INVALID_CREDENTIALS);
     }
 
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError(ErrorMessages.INVALID_CREDENTIALS);
     }
 
     const token = this.generateToken(user.id, user.email, user.role);
