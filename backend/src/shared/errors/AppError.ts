@@ -1,3 +1,5 @@
+import { HttpStatus, ErrorMessages } from '../constants/enums';
+
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
@@ -12,31 +14,31 @@ export class AppError extends Error {
 }
 
 export class BadRequestError extends AppError {
-  constructor(message: string) {
-    super(message, 400);
+  constructor(message: string = ErrorMessages.INVALID_INPUT) {
+    super(message, HttpStatus.BAD_REQUEST);
   }
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message: string = 'Unauthorized') {
-    super(message, 401);
+  constructor(message: string = ErrorMessages.UNAUTHORIZED) {
+    super(message, HttpStatus.UNAUTHORIZED);
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message: string = 'Forbidden') {
-    super(message, 403);
+  constructor(message: string = ErrorMessages.FORBIDDEN) {
+    super(message, HttpStatus.FORBIDDEN);
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message: string = 'Resource not found') {
-    super(message, 404);
+  constructor(message: string = ErrorMessages.NOT_FOUND) {
+    super(message, HttpStatus.NOT_FOUND);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super(message, 409);
+    super(message, HttpStatus.CONFLICT);
   }
 }

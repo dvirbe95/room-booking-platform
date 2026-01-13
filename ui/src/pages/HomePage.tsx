@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Room } from '../types';
 import { Button } from '../components/Button';
 import { X, Calendar, CheckCircle2 } from 'lucide-react';
+import { AppRoutes, ApiEndpoints, ErrorMessages } from '../shared/constants';
 
 export const HomePage = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export const HomePage = () => {
     dispatch(startSearch(data));
     
     try {
-      const response = await api.get('/rooms', {
+      const response = await api.get(ApiEndpoints.ROOMS, {
         params: {
           location: data.location || undefined,
           checkIn: data.checkIn,
@@ -34,7 +35,7 @@ export const HomePage = () => {
       });
       dispatch(setRooms(response.data));
     } catch (err: any) {
-      dispatch(setError(err.response?.data?.message || 'Failed to fetch rooms'));
+      dispatch(setError(err.response?.data?.message || ErrorMessages.FETCH_ROOMS_FAILED));
     } finally {
       dispatch(setLoading(false));
     }
@@ -42,7 +43,7 @@ export const HomePage = () => {
 
   const handleBookClick = (room: Room) => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate(AppRoutes.LOGIN);
       return;
     }
     setConfirmingRoom(room);
@@ -53,15 +54,15 @@ export const HomePage = () => {
 
     setBookingLoadingId(confirmingRoom.id);
     try {
-      await api.post('/bookings', {
+      await api.post(ApiEndpoints.BOOKINGS, {
         roomId: confirmingRoom.id,
         checkIn: searchParams.checkIn,
         checkOut: searchParams.checkOut,
       });
       setConfirmingRoom(null);
-      navigate('/my-bookings');
+      navigate(AppRoutes.MY_BOOKINGS);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to book room');
+      alert(err.response?.data?.message || ErrorMessages.BOOKING_FAILED);
     } finally {
       setBookingLoadingId(null);
     }

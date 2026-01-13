@@ -1,5 +1,6 @@
 import { BookingRepository } from './booking.repository';
 import { BadRequestError, ConflictError } from '../../shared/errors/AppError';
+import { ErrorMessages } from '../../shared/constants/enums';
 
 export class BookingService {
   private bookingRepository: BookingRepository;
@@ -27,7 +28,7 @@ export class BookingService {
       );
     } catch (error: any) {
       if (error.message.includes('booked') || error.message.includes('range')) {
-        throw new ConflictError(error.message);
+        throw new ConflictError(ErrorMessages.ROOM_NOT_AVAILABLE);
       }
       throw error;
     }
