@@ -7,6 +7,8 @@
     "start": "node dist/index.js",
     "dev": "nodemon --watch src/**/*.ts --exec ts-node src/index.ts",
     "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "lint": "eslint . --ext .ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
@@ -26,7 +28,11 @@
     "redis": "^4.6.5",
     "swagger-ui-express": "^5.0.1",
     "yamljs": "^0.3.0",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+     "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.1",
+    "supertest": "^6.3.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -36,6 +42,11 @@
     "@typescript-eslint/parser": "^8.52.0",
     "eslint": "^9.39.2",
     "install": "^0.13.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.1",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^2.0.12",
     "nodemon": "^3.1.11",
     "npm": "^11.7.0",
     "prisma": "^5.22.0",
